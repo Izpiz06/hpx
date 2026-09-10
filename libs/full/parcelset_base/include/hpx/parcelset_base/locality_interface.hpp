@@ -10,6 +10,7 @@
 
 #if defined(HPX_HAVE_NETWORKING)
 #include <hpx/modules/errors.hpp>
+#include <hpx/modules/naming_base.hpp>
 
 #include <hpx/parcelset_base/parcelset_base_fwd.hpp>
 
@@ -24,6 +25,22 @@ namespace hpx::parcelset {
     HPX_CXX_EXPORT HPX_EXPORT locality create_locality(std::string const& name);
 
     HPX_CXX_EXPORT HPX_EXPORT bool locality_was_disconnected(std::uint32_t id);
+
+    /// \brief Check if the locality associated with the given id was disconnected.
+    ///
+    /// \param id The target id to check.
+    /// \return true if the locality was disconnected, false otherwise.
+    HPX_CXX_EXPORT inline bool check_locality_disconnected(
+        hpx::id_type const& id)
+    {
+#if defined(HPX_HAVE_FORCE_DISCONNECT)
+        return parcelset::locality_was_disconnected(
+            naming::get_locality_id_from_id(id));
+#else
+        HPX_UNUSED(id);
+        return false;
+#endif
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     // initialize locality interface function wrappers

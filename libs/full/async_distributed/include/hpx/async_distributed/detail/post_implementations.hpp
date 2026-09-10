@@ -39,15 +39,12 @@ namespace hpx::detail {
                 hpx::actions::detail::get_action_name<action_type>());
         }
 
-#if defined(HPX_HAVE_FORCE_DISCONNECT)
-        if (parcelset::locality_was_disconnected(
-                naming::get_locality_id_from_id(id)))
+        if (parcelset::check_locality_disconnected(id))
         {
             HPX_THROW_EXCEPTION(hpx::error::locality_was_disconnected,
                 "hpx::detail::post_impl",
                 "the requested locality {} was disconnected", id);
         }
-#endif
 
         [[maybe_unused]] std::pair<bool, components::pinned_ptr> r;
         naming::address addr;
@@ -119,15 +116,12 @@ namespace hpx::detail {
                 hpx::actions::detail::get_action_name<action_type>());
         }
 
-#if defined(HPX_HAVE_FORCE_DISCONNECT)
-        if (parcelset::locality_was_disconnected(
-                naming::get_locality_id_from_id(id)))
+        if (parcelset::check_locality_disconnected(id))
         {
             HPX_THROW_EXCEPTION(hpx::error::locality_was_disconnected,
                 "hpx::detail::post_impl",
                 "the requested locality {} was disconnected", id);
         }
-#endif
 
         if (naming::get_locality_id_from_gid(addr.locality_) ==
             agas::get_locality_id())
@@ -172,15 +166,12 @@ namespace hpx::detail {
                 hpx::actions::detail::get_action_name<action_type>());
         }
 
-#if defined(HPX_HAVE_FORCE_DISCONNECT)
-        if (parcelset::locality_was_disconnected(
-                naming::get_locality_id_from_id(id)))
+        if (parcelset::check_locality_disconnected(id))
         {
             HPX_THROW_EXCEPTION(hpx::error::locality_was_disconnected,
                 "hpx::detail::post_impl",
                 "the requested locality {} was disconnected", id);
         }
-#endif
 
         [[maybe_unused]] std::pair<bool, components::pinned_ptr> r;
         naming::address addr;
@@ -247,15 +238,12 @@ namespace hpx::detail {
                 hpx::actions::detail::get_action_name<action_type>());
         }
 
-#if defined(HPX_HAVE_FORCE_DISCONNECT)
-        if (parcelset::locality_was_disconnected(
-                naming::get_locality_id_from_id(id)))
+        if (parcelset::check_locality_disconnected(id))
         {
             HPX_THROW_EXCEPTION(hpx::error::locality_was_disconnected,
                 "hpx::detail::post_impl",
                 "the requested locality {} was disconnected", id);
         }
-#endif
 
         if (naming::get_locality_id_from_gid(addr.locality_) ==
             agas::get_locality_id())
@@ -301,15 +289,12 @@ namespace hpx::detail {
             return false;
         }
 
-#if defined(HPX_HAVE_FORCE_DISCONNECT)
-        if (parcelset::locality_was_disconnected(
-                naming::get_locality_id_from_id(id)))
+        if (parcelset::check_locality_disconnected(id))
         {
             invoke_callback(HPX_FORWARD(Callback, cb),
                 make_system_error_code(hpx::error::locality_was_disconnected));
             return false;
         }
-#endif
 
         [[maybe_unused]] std::pair<bool, components::pinned_ptr> r;
         naming::address addr;
@@ -379,15 +364,12 @@ namespace hpx::detail {
             return false;
         }
 
-#if defined(HPX_HAVE_FORCE_DISCONNECT)
-        if (parcelset::locality_was_disconnected(
-                naming::get_locality_id_from_id(id)))
+        if (parcelset::check_locality_disconnected(id))
         {
             invoke_callback(HPX_FORWARD(Callback, cb),
                 make_system_error_code(hpx::error::locality_was_disconnected));
             return false;
         }
-#endif
 
         [[maybe_unused]] std::pair<bool, components::pinned_ptr> r;
         naming::address addr;

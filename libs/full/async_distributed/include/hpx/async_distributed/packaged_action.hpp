@@ -454,15 +454,12 @@ namespace hpx::lcos {
             using action_type = hpx::traits::extract_action_t<Action>;
             using component_type = action_type::component_type;
 
-#if defined(HPX_HAVE_FORCE_DISCONNECT)
-            if (parcelset::locality_was_disconnected(
-                    naming::get_locality_id_from_id(id)))
+            if (parcelset::check_locality_disconnected(id))
             {
                 HPX_THROW_EXCEPTION(hpx::error::locality_was_disconnected,
                     "hpx::detail::post",
                     "the requested locality {} was disconnected", id);
             }
-#endif
 
             [[maybe_unused]] std::pair<bool, components::pinned_ptr> r;
             naming::address addr;
@@ -523,15 +520,12 @@ namespace hpx::lcos {
             using action_type = hpx::traits::extract_action_t<Action>;
             using component_type = action_type::component_type;
 
-#if defined(HPX_HAVE_FORCE_DISCONNECT)
-            if (parcelset::locality_was_disconnected(
-                    naming::get_locality_id_from_id(id)))
+            if (parcelset::check_locality_disconnected(id))
             {
                 HPX_THROW_EXCEPTION(hpx::error::locality_was_disconnected,
                     "hpx::detail::post",
                     "the requested locality {} was disconnected", id);
             }
-#endif
 
             if (addr &&
                 naming::get_locality_id_from_gid(addr.locality_) ==
@@ -573,15 +567,12 @@ namespace hpx::lcos {
             using action_type = hpx::traits::extract_action_t<Action>;
             using component_type = action_type::component_type;
 
-#if defined(HPX_HAVE_FORCE_DISCONNECT)
-            if (parcelset::locality_was_disconnected(
-                    naming::get_locality_id_from_id(id)))
+            if (parcelset::check_locality_disconnected(id))
             {
                 HPX_THROW_EXCEPTION(hpx::error::locality_was_disconnected,
                     "hpx::detail::post_cb",
                     "the requested locality {} was disconnected", id);
             }
-#endif
 
             [[maybe_unused]] std::pair<bool, components::pinned_ptr> r;
             naming::address addr;
@@ -642,15 +633,12 @@ namespace hpx::lcos {
         void post_cb(naming::address&& addr, hpx::id_type const& id,
             Callback&& cb, Ts&&... vs)
         {
-#if defined(HPX_HAVE_FORCE_DISCONNECT)
-            if (parcelset::locality_was_disconnected(
-                    naming::get_locality_id_from_id(id)))
+            if (parcelset::check_locality_disconnected(id))
             {
                 HPX_THROW_EXCEPTION(hpx::error::locality_was_disconnected,
                     "hpx::detail::post_cb",
                     "the requested locality {} was disconnected", id);
             }
-#endif
 
             if (addr &&
                 naming::get_locality_id_from_gid(addr.locality_) ==

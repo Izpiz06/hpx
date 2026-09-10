@@ -62,15 +62,12 @@ namespace hpx::detail {
         using result_type = action_type::local_result_type;
         using component_type = action_type::component_type;
 
-#if defined(HPX_HAVE_FORCE_DISCONNECT)
-        if (parcelset::locality_was_disconnected(
-                naming::get_locality_id_from_id(id)))
+        if (parcelset::check_locality_disconnected(id))
         {
             HPX_THROW_EXCEPTION(hpx::error::locality_was_disconnected,
                 "hpx::detail::sync_impl",
                 "the requested locality {} was disconnected", id);
         }
-#endif
 
         [[maybe_unused]] std::pair<bool, components::pinned_ptr> r;
         naming::address addr;
