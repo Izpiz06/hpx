@@ -54,14 +54,20 @@ This preset enables:
 
 * ``HPX_WITH_STATIC_LINKING=ON`` — bundles everything into the ``.a`` archives
   that CE links against.
+* ``HPX_WITH_DISTRIBUTED_RUNTIME=OFF`` — local-only runtime. Compiler Explorer
+  cannot launch a second locality, so the distributed runtime is omitted from
+  this build.
 * ``HPX_WITH_NETWORKING=OFF`` — disables the parcelset so |hpx| never attempts
   to open a network socket.
 * ``HPX_WITH_FETCH_ASIO=ON`` — downloads Asio via FetchContent, removing the
   need for a system-level Asio installation.
+* ``HPX_WITH_FETCH_HWLOC=ON`` — fetches hwloc via FetchContent so the CE
+  install does not depend on a system hwloc package.
 * ``HPX_WITH_MALLOC=system`` — uses the system allocator; avoids a jemalloc or
   tcmalloc dependency.
 * ``HPX_WITH_TESTS=OFF``, ``HPX_WITH_EXAMPLES=OFF``,
-  ``HPX_WITH_DOCUMENTATION=OFF`` — skips everything that CE does not need.
+  ``HPX_WITH_DOCUMENTATION=OFF``, ``HPX_WITH_TOOLS=OFF`` — skips everything
+  that CE does not need.
 
 The preset produces four static libraries under ``build/godbolt-minimal/lib/``:
 
@@ -166,8 +172,11 @@ API function directly:
 The ``hpx/experimental/sandbox.hpp`` header
 ============================================
 
-|hpx| ships a header-only toolkit at ``hpx/experimental/sandbox.hpp`` designed
-specifically for code running in constrained environments. It provides:
+|hpx| ships ``hpx/experimental/sandbox.hpp`` for code running in constrained
+environments. Timing helpers (``measure``, ``benchmark``) are header-only.
+``detect_environment()`` and the ``print()`` members are compiled into
+``libhpx_core`` and are available in local-only builds, including
+``godbolt-minimal``. It provides:
 
 * **Environment introspection** — ``hpx::experimental::sandbox::detect_environment()``
   returns an ``environment_info`` struct describing the number of physical cores,
@@ -244,11 +253,9 @@ efficiency, and a verdict (``Excellent scaling``, ``Good scaling``,
 Known limitations in sandboxed environments
 =============================================
 
-* **Single locality only.** The distributed runtime can be compiled in
-  (``HPX_WITH_DISTRIBUTED_RUNTIME=ON``) and actions on locality 0 work
-  normally, but there is no way to launch a second locality from within CE's
-  sandbox. Code that calls ``hpx::find_all_localities()`` or
-  ``hpx::get_num_localities()`` will always see exactly one locality.
+* **Single locality only.** ``godbolt-minimal`` sets
+  ``HPX_WITH_DISTRIBUTED_RUNTIME=OFF``. There is no second locality inside CE's
+  sandbox, and distributed APIs are not part of this build.
 
 * **Networking is disabled.** ``HPX_WITH_NETWORKING=OFF`` means all
   parcelport-dependent functionality (remote actions, distributed data
