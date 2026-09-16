@@ -93,7 +93,13 @@ Linking without CMake
 ======================
 
 CE's backend compiles user code with a raw ``g++`` or ``clang++`` invocation.
-The complete set of flags needed is:
+A static |hpx| install ships one archive per module (``libhpx_logging.a``,
+``libhpx_include_local.a``, and so on) in addition to ``libhpx_wrap.a``,
+``libhpx_init.a``, ``libhpx.a``, and ``libhpx_core.a``. Those module objects
+are not merged into ``libhpx_core.a``, so linking only the four umbrella
+libraries leaves symbols such as ``detect_environment()`` undefined. Group
+every ``libhpx_*.a`` archive, then add Boost, hwloc, and the usual system
+libraries:
 
 .. code-block:: shell-session
 
@@ -103,15 +109,16 @@ The complete set of flags needed is:
        -L/path/to/hpx/lib                                      \
        -DHPX_APPLICATION_EXPORTS                               \
        -Wl,-wrap=main                                          \
-       -lhpx_wrap -lhpx_init -lhpx -lhpx_core                 \
+       -Wl,--start-group /path/to/hpx/lib/libhpx_*.a           \
+       -Wl,--end-group                                         \
        -lpthread -ldl -lrt
 
 Two details here are easy to get wrong:
 
-**Library link order.** The order ``hpx_wrap → hpx_init → hpx → hpx_core``
-must be preserved. Reversing it produces undefined-reference errors because
-``hpx_wrap`` depends on symbols in ``hpx_init``, which depends on the full
-runtime in ``hpx``, which in turn depends on the core library.
+**Library link order.** Put ``-Wl,-wrap=main`` and the ``libhpx_*.a`` group
+on the link line together. ``--start-group`` / ``--end-group`` is required
+because the module archives have circular references. Linking only
+``-lhpx_wrap -lhpx_init -lhpx -lhpx_core`` is not enough.
 
 **The** ``-Wl,-wrap=main`` **flag.** Including ``hpx/hpx_main.hpp`` (see
 :ref:`minimal`) works by re-routing control through |hpx|'s own entry point

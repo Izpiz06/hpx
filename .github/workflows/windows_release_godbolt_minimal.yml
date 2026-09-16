@@ -115,5 +115,5 @@ jobs:
 
         cmake --build build/smoke/build --config Release \
           -- -maxcpucount:2 -verbosity:minimal -nologo
-        build/smoke/build/Release/hello_world.exe
-        build/smoke/build/Release/hello_wrap.exe --hpx:threads=2
+        "$PWD/build/smoke/build/Release/hello_world.exe"
+        "$PWD/build/smoke/build/Release/hello_wrap.exe" --hpx:threads=2
