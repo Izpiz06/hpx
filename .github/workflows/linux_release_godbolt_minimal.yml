@@ -112,16 +112,26 @@ jobs:
         }
         EOF
 
-        # Compiler Explorer invokes g++ directly. Keep the documented CE link
-        # order and add any extra -L/-l/-Wl flags CMake needed (typically Boost).
-        EXTRA=$(ninja -C build/smoke/build -t commands hello_wrap \
-          | tr ' ' '\n' \
+        # Compiler Explorer invokes the compiler directly. Reuse the CMake
+        # compiler and -std= flag: default `g++` in build_env:17 is too old
+        # for -std=c++20 (it only accepts -std=c++2a). Keep the documented
+        # CE link order and add extra -L/-l/-Wl flags CMake needed
+        # (typically Boost).
+        COMMANDS=$(ninja -C build/smoke/build -t commands hello_wrap)
+        CXX=$(grep '^CMAKE_CXX_COMPILER:' \
+          build/smoke/build/CMakeCache.txt | head -n1 | cut -d= -f2)
+        STDFLAG=$(printf '%s\n' "$COMMANDS" | tr ' ' '\n' \
+          | grep -E '^-std=' | head -n1)
+        EXTRA=$(printf '%s\n' "$COMMANDS" | tr ' ' '\n' \
           | grep -E '^-l|^-L|^-Wl,' \
           | grep -vE 'hpx_wrap|hpx_init|^-lhpx$|hpx_core' \
           | sort -u \
           | tr '\n' ' ')
+        : "${CXX:=g++}"
+        : "${STDFLAG:=-std=c++20}"
 
-        g++ -std=c++20 -O2 -o build/smoke/raw_wrap build/smoke/raw_wrap.cpp \
+        "$CXX" ${STDFLAG} -O2 -o build/smoke/raw_wrap \
+          build/smoke/raw_wrap.cpp \
           -isystem "$PREFIX/include" \
           -L"$PREFIX/lib" \
           -DHPX_APPLICATION_EXPORTS \
