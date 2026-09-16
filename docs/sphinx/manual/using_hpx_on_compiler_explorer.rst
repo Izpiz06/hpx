@@ -122,6 +122,14 @@ never initialised and all API calls crash at startup. See
 :ref:`hpx_main_implementation_linux` for a detailed explanation of the
 mechanism.
 
+Windows does not support ``-Wl,-wrap=main`` (GNU ld). On Windows,
+``hpx/hpx_main.hpp`` redefines ``main`` as ``hpx_startup::user_main``, so a
+raw MSVC link of the same snippet uses ``hpx_wrap.lib``, ``hpx_init.lib``,
+``hpx.lib``, and ``hpx_core.lib`` with no wrap option. Prefer ``HPX::hpx``
+plus ``HPX::wrap_main`` from CMake. Compiler Explorer Execute runs in a
+Linux sandbox; the Windows path matters for MSVC compile-only sessions and
+for local ``godbolt-minimal`` builds on Windows.
+
 .. important::
 
    ``-DHPX_APPLICATION_EXPORTS`` must be passed as a preprocessor definition
@@ -272,3 +280,7 @@ Known limitations in sandboxed environments
   On macOS the linker uses ``-Wl,-e,_initialize_main`` instead. CE runs Linux
   containers, so this only matters when building the CE integration locally on
   macOS for testing.
+
+* **Windows does not use** ``-Wl,-wrap=main``. ``HPX_WITH_DYNAMIC_HPX_MAIN``
+  is unavailable on Windows, so ``hpx/hpx_main.hpp`` uses the ``main``
+  macro instead. Link ``HPX::wrap_main`` without a GNU wrap flag.

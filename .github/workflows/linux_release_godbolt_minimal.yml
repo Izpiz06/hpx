@@ -125,7 +125,6 @@ jobs:
         EXTRA=$(printf '%s\n' "$COMMANDS" | tr ' ' '\n' \
           | grep -E '^-l|^-L|^-Wl,' \
           | grep -vE 'hpx_wrap|hpx_init|^-lhpx$|hpx_core' \
-          | sort -u \
           | tr '\n' ' ')
         : "${CXX:=g++}"
         : "${STDFLAG:=-std=c++20}"
