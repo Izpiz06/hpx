@@ -631,10 +631,12 @@ namespace hpx::tracing {
         detail::os_thread_sleep_impl(num_thread);
     }
 
-    HPX_CXX_CORE_EXPORT constexpr void tracing_init(
-        char const*, int, char**, std::uint32_t = 0, std::uint32_t = 1) noexcept
-    {
-    }
+    // Emits build metadata into a Tracy capture (Info page) via
+    // TracyCAppInfo. Called once from the runtime bootstrap; Tracy queues
+    // the strings until a profiler connects, so a client attaching later
+    // still sees the metadata.
+    HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void tracing_init(char const*, int,
+        char**, std::uint32_t = 0, std::uint32_t = 1) noexcept;
 
     HPX_CXX_CORE_EXPORT constexpr void tracing_finalize() noexcept {}
 
