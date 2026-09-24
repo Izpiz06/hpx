@@ -550,7 +550,8 @@ namespace hpx::threads::policies {
         // an object so we do not over-clean while still guaranteeing progress
         // toward a matching stack size (#6793).
         template <typename Lock>
-        void recycle_terminated_for_heap(Lock& lk, thread_heap_type* target_heap)
+        void recycle_terminated_for_heap(
+            Lock& lk, thread_heap_type* target_heap)
         {
             HPX_ASSERT_OWNS_LOCK(lk);
 
@@ -561,9 +562,9 @@ namespace hpx::threads::policies {
                 return;
             }
 
-            std::int64_t delete_count = (std::min) (static_cast<std::int64_t>(
-                                                       count / 10),
-                static_cast<std::int64_t>(parameters_.max_delete_count_));
+            std::int64_t delete_count =
+                (std::min) (static_cast<std::int64_t>(count / 10),
+                    static_cast<std::int64_t>(parameters_.max_delete_count_));
             delete_count = (std::max) (delete_count,
                 static_cast<std::int64_t>(parameters_.min_delete_count_));
             delete_count = (std::min) (delete_count, count);
@@ -580,7 +581,8 @@ namespace hpx::threads::policies {
                 ++term_delta;
                 thread_id_type tid(to_delete);
 
-                HPX_ASSERT(&get_thread_id_data(tid)->get_queue<thread_queue>() ==
+                HPX_ASSERT(
+                    &get_thread_id_data(tid)->get_queue<thread_queue>() ==
                     this);
 
                 if (thread_map_.erase(tid) != 0)

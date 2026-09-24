@@ -353,9 +353,8 @@ namespace hpx::threads::policies {
                 // Bounded recycle: never zero when items exist (count/2 == 0
                 // previously skipped the single-item case). Cap like
                 // thread_queue with min/max_delete_count_.
-                std::int64_t const count =
-                    terminated_items_count_.data_.load(
-                        std::memory_order_relaxed);
+                std::int64_t const count = terminated_items_count_.data_.load(
+                    std::memory_order_relaxed);
                 std::int64_t delete_count = (std::min) (count / 2,
                     static_cast<std::int64_t>(parameters_.max_delete_count_));
                 delete_count = (std::max) (delete_count,
@@ -386,14 +385,15 @@ namespace hpx::threads::policies {
                        std::memory_order_relaxed) == 0;
         }
 
+#if !defined(HPX_HAVE_ADDRESS_SANITIZER)
         // Recycle a bounded number of terminated threads into heaps. Stops
         // early once target_heap is non-empty so create can reuse a matching
         // stack size without draining the whole terminated list (#6793 /
         // CodeRabbit).
         void recycle_terminated_for_heap(thread_heap_type* target_heap)
         {
-            std::int64_t const count = terminated_items_count_.data_.load(
-                std::memory_order_relaxed);
+            std::int64_t const count =
+                terminated_items_count_.data_.load(std::memory_order_relaxed);
             if (count == 0)
             {
                 return;
@@ -426,6 +426,7 @@ namespace hpx::threads::policies {
                 }
             }
         }
+#endif
 
         // ----------------------------------------------------------------
         void create_thread(thread_init_data& data, thread_id_ref_type* tid,
