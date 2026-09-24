@@ -14,6 +14,7 @@
 #include <hpx/schedulers/lockfree_queue_backends.hpp>
 #include <hpx/schedulers/macros.hpp>
 
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <cstddef>
@@ -349,11 +350,21 @@ namespace hpx::threads::policies {
             }
             else
             {
-                // delete only this many threads
-                auto delete_count = static_cast<std::int64_t>(
+                // Bounded recycle: never zero when items exist (count/2 == 0
+                // previously skipped the single-item case). Cap like
+                // thread_queue with min/max_delete_count_.
+                std::int64_t const count =
                     terminated_items_count_.data_.load(
-                        std::memory_order_relaxed) /
-                    2);
+                        std::memory_order_relaxed);
+                std::int64_t delete_count = (std::min) (count / 2,
+                    static_cast<std::int64_t>(parameters_.max_delete_count_));
+                delete_count = (std::max) (delete_count,
+                    static_cast<std::int64_t>(parameters_.min_delete_count_));
+                delete_count = (std::min) (delete_count, count);
+                if (delete_count == 0 && count > 0)
+                {
+                    delete_count = 1;
+                }
 
                 tq_deb.debug(debug::str<>("cleanup"), "recycle", "delete_count",
                     debug::dec<3>(delete_count));
@@ -373,6 +384,47 @@ namespace hpx::threads::policies {
             }
             return terminated_items_count_.data_.load(
                        std::memory_order_relaxed) == 0;
+        }
+
+        // Recycle a bounded number of terminated threads into heaps. Stops
+        // early once target_heap is non-empty so create can reuse a matching
+        // stack size without draining the whole terminated list (#6793 /
+        // CodeRabbit).
+        void recycle_terminated_for_heap(thread_heap_type* target_heap)
+        {
+            std::int64_t const count = terminated_items_count_.data_.load(
+                std::memory_order_relaxed);
+            if (count == 0)
+            {
+                return;
+            }
+
+            scoped_lock lk(thread_map_mtx_.data_);
+
+            std::int64_t delete_count = (std::min) (count / 2,
+                static_cast<std::int64_t>(parameters_.max_delete_count_));
+            delete_count = (std::max) (delete_count,
+                static_cast<std::int64_t>(parameters_.min_delete_count_));
+            delete_count = (std::min) (delete_count, count);
+            if (delete_count == 0)
+            {
+                delete_count = 1;
+            }
+
+            thread_data* todelete;
+            while (delete_count && terminated_items_.pop(todelete))
+            {
+                thread_id_type tid(todelete);
+                --terminated_items_count_.data_;
+                remove_from_thread_map(tid, false);
+                recycle_thread(tid);
+                --delete_count;
+
+                if (target_heap != nullptr && !target_heap->empty())
+                {
+                    break;
+                }
+            }
         }
 
         // ----------------------------------------------------------------
@@ -486,7 +538,7 @@ namespace hpx::threads::policies {
                     terminated_items_count_.data_.load(
                         std::memory_order_relaxed) != 0)
                 {
-                    cleanup_terminated(thread_num_, false);
+                    recycle_terminated_for_heap(heap);
                 }
 
                 if (!heap->empty())

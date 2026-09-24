@@ -183,7 +183,7 @@ namespace hpx::threads::policies {
                     terminated_items_count_.load(std::memory_order_acquire) !=
                         0)
                 {
-                    cleanup_terminated_locked(lk, false);
+                    recycle_terminated_for_heap(lk, heap);
                 }
 
                 if (!heap->empty())
@@ -544,6 +544,63 @@ namespace hpx::threads::policies {
                 HPX_ASSERT(remaining - map_delta >= 0);
             }
             return terminated_items_count_.load(std::memory_order_acquire) == 0;
+        }
+
+        // Bounded recycle for create_thread_object: stop once target_heap has
+        // an object so we do not over-clean while still guaranteeing progress
+        // toward a matching stack size (#6793).
+        template <typename Lock>
+        void recycle_terminated_for_heap(Lock& lk, thread_heap_type* target_heap)
+        {
+            HPX_ASSERT_OWNS_LOCK(lk);
+
+            std::int64_t const count =
+                terminated_items_count_.load(std::memory_order_acquire);
+            if (count == 0)
+            {
+                return;
+            }
+
+            std::int64_t delete_count = (std::min) (static_cast<std::int64_t>(
+                                                       count / 10),
+                static_cast<std::int64_t>(parameters_.max_delete_count_));
+            delete_count = (std::max) (delete_count,
+                static_cast<std::int64_t>(parameters_.min_delete_count_));
+            delete_count = (std::min) (delete_count, count);
+            if (delete_count == 0)
+            {
+                delete_count = 1;
+            }
+
+            std::int64_t term_delta = 0;
+            std::int64_t map_delta = 0;
+            thread_data* to_delete;
+            while (delete_count && terminated_items_.pop(to_delete))
+            {
+                ++term_delta;
+                thread_id_type tid(to_delete);
+
+                HPX_ASSERT(&get_thread_id_data(tid)->get_queue<thread_queue>() ==
+                    this);
+
+                if (thread_map_.erase(tid) != 0)
+                {
+                    recycle_thread(HPX_MOVE(tid), lk);
+                    ++map_delta;
+                }
+                --delete_count;
+
+                if (target_heap != nullptr && !target_heap->empty())
+                {
+                    break;
+                }
+            }
+            terminated_items_count_.fetch_sub(
+                term_delta, std::memory_order_acq_rel);
+            [[maybe_unused]] std::int64_t remaining =
+                thread_map_count_.fetch_sub(
+                    map_delta, std::memory_order_acq_rel);
+            HPX_ASSERT(remaining - map_delta >= 0);
         }
 
     public:
