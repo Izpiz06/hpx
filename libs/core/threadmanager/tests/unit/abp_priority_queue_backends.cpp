@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
 
     {
         // Smoke: abp-priority-lifo must start with 128-bit atomics available.
-        std::vector<std::string> const args = {
+        std::vector<std::string> args = {
             argv[0], "--hpx:queuing=abp-priority-lifo"};
         std::vector<char*> av;
         for (auto& s : args)
@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
     }
 
     {
-        std::vector<std::string> const args = {
+        std::vector<std::string> args = {
             argv[0], "--hpx:queuing=abp-priority-fifo"};
         std::vector<char*> av;
         for (auto& s : args)
