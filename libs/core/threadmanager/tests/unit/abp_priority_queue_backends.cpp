@@ -41,6 +41,19 @@ static_assert(
             hpx::threads::policies::lockfree_abp_fifo>>,
     "abp-priority-fifo must use lockfree_abp_fifo");
 
+// Negative guards against the pre-#6793 factory backends.
+static_assert(
+    !std::is_same_v<hpx::threads::detail::abp_priority_fifo_scheduler,
+        hpx::threads::policies::local_priority_queue_scheduler<std::mutex,
+            hpx::threads::policies::lockfree_fifo>>,
+    "abp-priority-fifo must not use plain lockfree_fifo");
+
+static_assert(
+    !std::is_same_v<hpx::threads::detail::abp_priority_lifo_scheduler,
+        hpx::threads::policies::local_priority_queue_scheduler<std::mutex,
+            hpx::threads::policies::lockfree_lifo>>,
+    "abp-priority-lifo must not use plain lockfree_lifo");
+
 int hpx_main()
 {
     bool ran = false;
