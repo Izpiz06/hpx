@@ -9,6 +9,7 @@
 
 #if defined(HPX_HAVE_TRACY)
 
+#include <hpx/modules/preprocessor.hpp>
 #include <hpx/modules/tracy.hpp>
 #include <hpx/tracing/tracing.hpp>
 
@@ -609,11 +610,8 @@ namespace hpx::tracing {
         static constexpr char const git[] = "HPX git: " HPX_HAVE_GIT_COMMIT;
         emit_appinfo(git, sizeof(git) - 1);
 
-#if defined(HPX_DEBUG)
-        static constexpr char const build_type[] = "HPX build type: debug";
-#else
-        static constexpr char const build_type[] = "HPX build type: release";
-#endif
+        static constexpr char const build_type[] =
+            "HPX build type: " HPX_PP_STRINGIZE(HPX_BUILD_TYPE);
         emit_appinfo(build_type, sizeof(build_type) - 1);
 
         static constexpr char const build_date[] =
