@@ -21,24 +21,24 @@
 
 #if defined(HPX_HAVE_CXX11_STD_ATOMIC_128BIT)
 
-static_assert(
-    !std::is_same_v<hpx::threads::policies::lockfree_abp_lifo,
-        hpx::threads::policies::lockfree_lifo>,
+static_assert(!std::is_same_v<hpx::threads::policies::lockfree_abp_lifo,
+                  hpx::threads::policies::lockfree_lifo>,
     "ABP LIFO backend must differ from plain LIFO");
 
-static_assert(
-    !std::is_same_v<hpx::threads::policies::lockfree_abp_fifo,
-        hpx::threads::policies::lockfree_fifo>,
+static_assert(!std::is_same_v<hpx::threads::policies::lockfree_abp_fifo,
+                  hpx::threads::policies::lockfree_fifo>,
     "ABP FIFO backend must differ from plain FIFO");
 
-static_assert(std::is_same_v<hpx::threads::detail::abp_priority_lifo_scheduler,
-                  hpx::threads::policies::local_priority_queue_scheduler<
-                      std::mutex, hpx::threads::policies::lockfree_abp_lifo>>,
+static_assert(
+    std::is_same_v<hpx::threads::detail::abp_priority_lifo_scheduler,
+        hpx::threads::policies::local_priority_queue_scheduler<std::mutex,
+            hpx::threads::policies::lockfree_abp_lifo>>,
     "abp-priority-lifo must use lockfree_abp_lifo");
 
-static_assert(std::is_same_v<hpx::threads::detail::abp_priority_fifo_scheduler,
-                  hpx::threads::policies::local_priority_queue_scheduler<
-                      std::mutex, hpx::threads::policies::lockfree_abp_fifo>>,
+static_assert(
+    std::is_same_v<hpx::threads::detail::abp_priority_fifo_scheduler,
+        hpx::threads::policies::local_priority_queue_scheduler<std::mutex,
+            hpx::threads::policies::lockfree_abp_fifo>>,
     "abp-priority-fifo must use lockfree_abp_fifo");
 
 int hpx_main()
