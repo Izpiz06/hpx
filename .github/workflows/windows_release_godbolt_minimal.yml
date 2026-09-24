@@ -70,75 +70,10 @@ jobs:
     - name: Build and run CMake smoke test
       shell: bash
       run: |
-        mkdir -p build/smoke
-        cat > build/smoke/CMakeLists.txt << 'EOF'
-        cmake_minimum_required(VERSION 3.18)
-        project(hpx_godbolt_minimal_smoketest CXX)
-
-        find_package(HPX REQUIRED)
-
-        add_executable(hello_world hello_world.cpp)
-        target_link_libraries(hello_world PRIVATE HPX::hpx)
-
-        add_executable(hello_wrap hello_wrap.cpp)
-        target_link_libraries(hello_wrap PRIVATE HPX::hpx HPX::wrap_main)
-        EOF
-
-        cat > build/smoke/hello_world.cpp << 'EOF'
-        #include <hpx/init.hpp>
-
-        #include <iostream>
-
-        int hpx_main(int, char*[])
-        {
-          std::cout << "Hello World!\n";
-          return hpx::local::finalize();
-        }
-
-        int main(int argc, char* argv[])
-        {
-          return hpx::local::init(&hpx_main, argc, argv);
-        }
-        EOF
-
-        cat > build/smoke/hello_wrap.cpp << 'EOF'
-        #include <hpx/hpx_main.hpp>
-        #include <hpx/experimental/sandbox.hpp>
-
-        #include <iostream>
-
-        int main()
-        {
-          hpx::experimental::sandbox::describe_environment(std::cout);
-          std::cout << "Hello wrap-main\n";
-          return 0;
-        }
-        EOF
-
-        cmake \
-          -Sbuild/smoke \
-          -Bbuild/smoke/build \
-          -G'Visual Studio 17 2022' \
-          -DCMAKE_PREFIX_PATH="$PWD/build/install" \
-          -DCMAKE_TOOLCHAIN_FILE='C:/projects/vcpkg/scripts/buildsystems/vcpkg.cmake'
-
-        cmake --build build/smoke/build --config Release \
-          -- -maxcpucount:2 -verbosity:minimal -nologo
-
-        # Fetched hwloc is a DLL. Windows will not start the smoke binaries
-        # unless that DLL is on PATH or sits next to the .exe. Git bash
-        # reports a missing DLL as exit 127.
-        SMOKE_DIR=build/smoke/build/Release
-        for dll_dir in \
-            "$PWD/build/install/bin" \
-            "$PWD/build/install/hwloc_installed/bin" \
-            "$PWD/build/_deps/hwloc-src/bin"
-        do
-          if [ -d "$dll_dir" ]; then
-            cp -f "$dll_dir"/*.dll "$SMOKE_DIR/" 2>/dev/null || true
-            export PATH="$dll_dir:$PATH"
-          fi
-        done
-
-        "./$SMOKE_DIR/hello_world.exe"
-        "./$SMOKE_DIR/hello_wrap.exe" --hpx:threads=2
+        .github/ci-scripts/godbolt_minimal_smoke/run_cmake_smoke.sh \
+          --prefix "$PWD/build/install" \
+          --generator 'Visual Studio 17 2022' \
+          --toolchain 'C:/projects/vcpkg/scripts/buildsystems/vcpkg.cmake' \
+          --config Release \
+          --copy-dlls \
+          --build-dir build/smoke/build
