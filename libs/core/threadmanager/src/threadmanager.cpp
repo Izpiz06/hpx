@@ -29,6 +29,7 @@
 #include <hpx/modules/topology.hpp>
 #include <hpx/modules/type_support.hpp>
 #include <hpx/modules/util.hpp>
+#include <hpx/threadmanager/detail/abp_priority_scheduler_types.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -451,10 +452,8 @@ namespace hpx::threads {
         detail::check_num_high_priority_queues(
             thread_pool_init.num_threads_, num_high_priority_queues);
 
-        // instantiate the scheduler
-        using local_sched_type =
-            hpx::threads::policies::local_priority_queue_scheduler<std::mutex,
-                hpx::threads::policies::lockfree_fifo>;
+        // instantiate the scheduler (ABP FIFO backend — see #6793)
+        using local_sched_type = detail::abp_priority_fifo_scheduler;
 
         local_sched_type::init_parameter_type init(
             thread_pool_init.num_threads_, thread_pool_init.affinity_data_,
@@ -503,10 +502,8 @@ namespace hpx::threads {
         detail::check_num_high_priority_queues(
             thread_pool_init.num_threads_, num_high_priority_queues);
 
-        // instantiate the scheduler
-        using local_sched_type =
-            hpx::threads::policies::local_priority_queue_scheduler<std::mutex,
-                hpx::threads::policies::lockfree_lifo>;
+        // instantiate the scheduler (ABP LIFO backend — see #6793)
+        using local_sched_type = detail::abp_priority_lifo_scheduler;
 
         local_sched_type::init_parameter_type init(
             thread_pool_init.num_threads_, thread_pool_init.affinity_data_,
