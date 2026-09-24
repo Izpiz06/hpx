@@ -477,16 +477,48 @@ namespace hpx::threads::policies {
 
             // ASAN gets confused by reusing threads/stacks
 #if !defined(HPX_HAVE_ADDRESS_SANITIZER)
-            // Check for an unused thread object.
-            if (heap && !heap->empty())    //-V522
+            // Prefer recycled thread objects. If the heap is empty, first
+            // move terminated threads back onto it so recursive async /
+            // fork-join trees do not malloc under load.
+            if (heap)    //-V522
             {
-                // Take ownership of the thread object and rebind it.
-                tid = heap->front();
-                heap->pop_front();
-                get_thread_id_data(tid)->rebind(data);
-                tq_deb.debug(debug::str<>("create_thread_object"), "rebind",
-                    queue_data_print(this),
-                    debug::threadinfo<threads::thread_id_ref_type*>(&tid));
+                if (HPX_UNLIKELY(heap->empty()) &&
+                    terminated_items_count_.data_.load(
+                        std::memory_order_relaxed) != 0)
+                {
+                    cleanup_terminated(thread_num_, false);
+                }
+
+                if (!heap->empty())
+                {
+                    // Take ownership of the thread object and rebind it.
+                    tid = heap->front();
+                    heap->pop_front();
+                    get_thread_id_data(tid)->rebind(data);
+                    tq_deb.debug(debug::str<>("create_thread_object"), "rebind",
+                        queue_data_print(this),
+                        debug::threadinfo<threads::thread_id_ref_type*>(&tid));
+                }
+                else
+                {
+                    // Allocate a new thread object.
+                    threads::thread_data* p;
+                    if (stacksize == parameters_.nostack_stacksize_)
+                    {
+                        p = threads::thread_data_stackless::create(
+                            data, this, stacksize);
+                    }
+                    else
+                    {
+                        p = threads::thread_data_stackful::create(
+                            data, this, stacksize);
+                    }
+                    tid = thread_id_ref_type(p, thread_id_addref::no);
+
+                    tq_deb.debug(debug::str<>("create_thread_object"), "new",
+                        queue_data_print(this),
+                        debug::threadinfo<threads::thread_data*>(p));
+                }
             }
             else
 #endif
@@ -881,6 +913,11 @@ namespace hpx::threads::policies {
             if (!xthread && (count > parameters_.max_terminated_threads_))
             {
                 // clean up all terminated threads
+                cleanup_terminated(thread_num, false);
+            }
+            else if (!xthread && (count > parameters_.min_delete_count_))
+            {
+                // Recycle early for recursive async reuse (see #6793).
                 cleanup_terminated(thread_num, false);
             }
         }

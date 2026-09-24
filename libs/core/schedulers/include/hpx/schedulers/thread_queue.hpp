@@ -174,13 +174,43 @@ namespace hpx::threads::policies {
 
             // ASAN gets confused by reusing threads/stacks
 #if !defined(HPX_HAVE_ADDRESS_SANITIZER)
-            // Check for an unused thread object.
-            if (heap && !heap->empty())    //-V522
+            // Prefer recycled thread objects. If the heap is empty, first
+            // move terminated threads back onto it so recursive async /
+            // fork-join trees (skynet, fib) do not malloc under load.
+            if (heap)    //-V522
             {
-                // Take ownership of the thread object and rebind it.
-                thrd = heap->back();
-                heap->pop_back();
-                get_thread_id_data(thrd)->rebind(data);
+                if (HPX_UNLIKELY(heap->empty()) &&
+                    terminated_items_count_.load(std::memory_order_acquire) !=
+                        0)
+                {
+                    cleanup_terminated_locked(lk, false);
+                }
+
+                if (!heap->empty())
+                {
+                    // Take ownership of the thread object and rebind it.
+                    thrd = heap->back();
+                    heap->pop_back();
+                    get_thread_id_data(thrd)->rebind(data);
+                }
+                else
+                {
+                    hpx::unlock_guard<Lock> ull(lk);
+
+                    // Allocate a new thread object.
+                    threads::thread_data* p;
+                    if (stacksize == parameters_.nostack_stacksize_)
+                    {
+                        p = threads::thread_data_stackless::create(
+                            data, this, stacksize);
+                    }
+                    else
+                    {
+                        p = threads::thread_data_stackful::create(
+                            data, this, stacksize);
+                    }
+                    thrd = thread_id_ref_type(p, thread_id_addref::no);
+                }
             }
             else
 #endif
@@ -1060,9 +1090,16 @@ namespace hpx::threads::policies {
 
             terminated_items_.push(thrd);
 
-            if (++terminated_items_count_ > parameters_.max_terminated_threads_)
+            std::int64_t const count = ++terminated_items_count_;
+            if (count > parameters_.max_terminated_threads_)
             {
                 cleanup_terminated(true);    // clean up all terminated threads
+            }
+            else if (count > parameters_.min_delete_count_)
+            {
+                // Recycle early so create_thread_object can reuse stacks
+                // during recursive async bursts (see #6793).
+                cleanup_terminated(false);
             }
         }
 
