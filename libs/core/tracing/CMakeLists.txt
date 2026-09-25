@@ -12,7 +12,7 @@ set(tracing_headers
 )
 set(tracing_sources backends/ittnotify.cpp backends/tracy.cpp)
 
-set(tracing_module_dependencies hpx_config hpx_preprocessor)
+set(tracing_module_dependencies hpx_config)
 if(HPX_WITH_TRACY)
   list(APPEND tracing_module_dependencies hpx_tracy)
 endif()

@@ -294,6 +294,11 @@ namespace hpx::tracing {
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void tracing_init(char const* name,
         int argc, char** argv, std::uint32_t rank = 0, std::uint32_t size = 1);
 
+    HPX_CXX_CORE_EXPORT constexpr void emit_appinfo(
+        char const*, std::size_t) noexcept
+    {
+    }
+
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void tracing_finalize();
 
     HPX_CXX_CORE_EXPORT HPX_CORE_EXPORT void register_thread(char const* name);

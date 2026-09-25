@@ -9,7 +9,6 @@
 
 #if defined(HPX_HAVE_TRACY)
 
-#include <hpx/modules/preprocessor.hpp>
 #include <hpx/modules/tracy.hpp>
 #include <hpx/tracing/tracing.hpp>
 
@@ -580,43 +579,12 @@ namespace hpx::tracing {
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    // tracing_init: emit build metadata as Tracy App Info lines so a
-    // captured trace can be correlated with the HPX build that produced
-    // it. Tracy queues these messages until a profiler connects.
-    //
-    // Every string here comes from hpx/config/version.hpp (reached via
-    // hpx/config.hpp), so tracing does not need a MODULE_DEPENDENCIES
-    // edge to hpx_version -- that edge introduces a cycle through
-    // format/prefix/logging back to tracing when the modules are built
-    // as OBJECT libraries.
+    // emit_appinfo -- caller builds the metadata string so this module
+    // does not need to depend on hpx_version.
 
-    namespace {
-
-        inline void emit_appinfo(char const* s, std::size_t len) noexcept
-        {
-            TracyCAppInfo(s, len);
-        }
-    }    // namespace
-
-    void tracing_init(char const*, int, char**, std::uint32_t /*rank*/,
-        std::uint32_t /*num_ranks*/) noexcept
+    void emit_appinfo(char const* text, std::size_t size) noexcept
     {
-        static constexpr char const version[] =
-            "HPX v" HPX_PP_STRINGIZE(HPX_VERSION_MAJOR) "." HPX_PP_STRINGIZE(
-                HPX_VERSION_MINOR) "." HPX_PP_STRINGIZE(HPX_VERSION_SUBMINOR)
-                HPX_VERSION_TAG;
-        emit_appinfo(version, sizeof(version) - 1);
-
-        static constexpr char const git[] = "HPX git: " HPX_HAVE_GIT_COMMIT;
-        emit_appinfo(git, sizeof(git) - 1);
-
-        static constexpr char const build_type[] =
-            "HPX build type: " HPX_PP_STRINGIZE(HPX_BUILD_TYPE);
-        emit_appinfo(build_type, sizeof(build_type) - 1);
-
-        static constexpr char const build_date[] =
-            "HPX build date: " __DATE__ " " __TIME__;
-        emit_appinfo(build_date, sizeof(build_date) - 1);
+        TracyCAppInfo(text, size);
     }
 
 }    // namespace hpx::tracing

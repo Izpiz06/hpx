@@ -339,6 +339,11 @@ namespace hpx::tracing {
     {
     }
 
+    HPX_CXX_CORE_EXPORT constexpr void emit_appinfo(
+        char const*, std::size_t) noexcept
+    {
+    }
+
     HPX_CXX_CORE_EXPORT constexpr void tracing_finalize() noexcept {}
 
     HPX_CXX_CORE_EXPORT constexpr void register_thread(char const*) noexcept {}
