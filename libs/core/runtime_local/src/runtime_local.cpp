@@ -1515,6 +1515,14 @@ namespace hpx {
         // initialize instrumentation system
         hpx::tracing::tracing_init(nullptr, 0, nullptr);
 
+        // record build metadata so a capture can be correlated with
+        // the HPX build that produced it
+        {
+            auto const version_info = hpx::complete_version();
+            hpx::tracing::emit_appinfo(
+                version_info.c_str(), version_info.size());
+        }
+
         LRT_(info).format("cmd_line: {}", get_config().get_cmd_line());
 
         HPX_UNUSED(

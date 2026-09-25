@@ -456,6 +456,14 @@ namespace hpx {
         hpx::tracing::tracing_init(nullptr, 0, nullptr, hpx::get_locality_id(),
             hpx::get_initial_num_localities());
 
+        // record build metadata so a capture can be correlated with
+        // the HPX build that produced it
+        {
+            auto const version_info = hpx::complete_version();
+            hpx::tracing::emit_appinfo(
+                version_info.c_str(), version_info.size());
+        }
+
         LRT_(info).format("cmd_line: {}", get_config().get_cmd_line());
 
         lbt_ << "(1st stage) runtime_distributed::start: booting locality "
