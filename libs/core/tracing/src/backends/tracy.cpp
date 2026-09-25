@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <string_view>
 
 namespace hpx::tracing {
 
@@ -579,12 +580,15 @@ namespace hpx::tracing {
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    // emit_appinfo -- caller builds the metadata string so this module
-    // does not need to depend on hpx_version.
+    // tracing_init -- caller builds the metadata string (typically
+    // hpx::complete_version()) so this module does not need to depend
+    // on hpx_version.
 
-    void emit_appinfo(char const* text, std::size_t size) noexcept
+    void tracing_init(char const*, int, char**, std::uint32_t, std::uint32_t,
+        std::string_view version_info) noexcept
     {
-        TracyCAppInfo(text, size);
+        if (!version_info.empty())
+            TracyCAppInfo(version_info.data(), version_info.size());
     }
 
 }    // namespace hpx::tracing
