@@ -29,14 +29,16 @@ namespace hpx::threads::detail {
             hpx::threads::policies::lockfree_abp_lifo>;
 
     // Negative guards: catch silent reversion to the pre-#6793 backends.
-    static_assert(!std::is_same_v<abp_priority_fifo_scheduler,
-                      hpx::threads::policies::local_priority_queue_scheduler<
-                          std::mutex, hpx::threads::policies::lockfree_fifo>>,
+    static_assert(
+        !std::is_same_v<abp_priority_fifo_scheduler,
+            hpx::threads::policies::local_priority_queue_scheduler<std::mutex,
+                hpx::threads::policies::lockfree_fifo>>,
         "abp-priority-fifo must not use plain lockfree_fifo");
 
-    static_assert(!std::is_same_v<abp_priority_lifo_scheduler,
-                      hpx::threads::policies::local_priority_queue_scheduler<
-                          std::mutex, hpx::threads::policies::lockfree_lifo>>,
+    static_assert(
+        !std::is_same_v<abp_priority_lifo_scheduler,
+            hpx::threads::policies::local_priority_queue_scheduler<std::mutex,
+                hpx::threads::policies::lockfree_lifo>>,
         "abp-priority-lifo must not use plain lockfree_lifo");
 
 }    // namespace hpx::threads::detail

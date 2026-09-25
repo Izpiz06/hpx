@@ -453,7 +453,7 @@ namespace hpx::threads {
         detail::check_num_high_priority_queues(
             thread_pool_init.num_threads_, num_high_priority_queues);
 
-        // instantiate the scheduler (ABP FIFO backend — see #6793)
+        // instantiate the scheduler (ABP FIFO backend - see #6793)
         using local_sched_type = detail::abp_priority_fifo_scheduler;
         static_assert(
             !std::is_same_v<local_sched_type,
@@ -508,7 +508,7 @@ namespace hpx::threads {
         detail::check_num_high_priority_queues(
             thread_pool_init.num_threads_, num_high_priority_queues);
 
-        // instantiate the scheduler (ABP LIFO backend — see #6793)
+        // instantiate the scheduler (ABP LIFO backend - see #6793)
         using local_sched_type = detail::abp_priority_lifo_scheduler;
         static_assert(
             !std::is_same_v<local_sched_type,
