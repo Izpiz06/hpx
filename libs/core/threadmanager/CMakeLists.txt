@@ -6,8 +6,8 @@
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-set(threadmanager_headers
-    hpx/threadmanager/threadmanager.hpp hpx/threadmanager/threadmanager_fwd.hpp
+set(threadmanager_headers hpx/threadmanager/threadmanager.hpp
+                          hpx/threadmanager/threadmanager_fwd.hpp
 )
 
 # cmake-format: off
