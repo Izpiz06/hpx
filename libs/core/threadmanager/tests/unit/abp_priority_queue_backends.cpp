@@ -5,16 +5,17 @@
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 // Regression guard for #6793: --hpx:queuing=abp-priority-{fifo,lifo} must
-// wire the ABP queue backends, not plain lockfree_{fifo,lifo}.
+// start, and the ABP queue backends must remain distinct from plain
+// lockfree_{fifo,lifo}. Factory wiring itself is guarded by static_asserts
+// inside threadmanager.cpp (kept private so schedulers stay out of the
+// threadmanager module public surface / C++20 module header).
 
 #include <hpx/config.hpp>
 #include <hpx/future.hpp>
 #include <hpx/init.hpp>
 #include <hpx/modules/schedulers.hpp>
 #include <hpx/modules/testing.hpp>
-#include <hpx/threadmanager/detail/abp_priority_scheduler_types.hpp>
 
-#include <mutex>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -28,31 +29,6 @@ static_assert(!std::is_same_v<hpx::threads::policies::lockfree_abp_lifo,
 static_assert(!std::is_same_v<hpx::threads::policies::lockfree_abp_fifo,
                   hpx::threads::policies::lockfree_fifo>,
     "ABP FIFO backend must differ from plain FIFO");
-
-static_assert(
-    std::is_same_v<hpx::threads::detail::abp_priority_lifo_scheduler,
-        hpx::threads::policies::local_priority_queue_scheduler<std::mutex,
-            hpx::threads::policies::lockfree_abp_lifo>>,
-    "abp-priority-lifo must use lockfree_abp_lifo");
-
-static_assert(
-    std::is_same_v<hpx::threads::detail::abp_priority_fifo_scheduler,
-        hpx::threads::policies::local_priority_queue_scheduler<std::mutex,
-            hpx::threads::policies::lockfree_abp_fifo>>,
-    "abp-priority-fifo must use lockfree_abp_fifo");
-
-// Negative guards against the pre-#6793 factory backends.
-static_assert(
-    !std::is_same_v<hpx::threads::detail::abp_priority_fifo_scheduler,
-        hpx::threads::policies::local_priority_queue_scheduler<std::mutex,
-            hpx::threads::policies::lockfree_fifo>>,
-    "abp-priority-fifo must not use plain lockfree_fifo");
-
-static_assert(
-    !std::is_same_v<hpx::threads::detail::abp_priority_lifo_scheduler,
-        hpx::threads::policies::local_priority_queue_scheduler<std::mutex,
-            hpx::threads::policies::lockfree_lifo>>,
-    "abp-priority-lifo must not use plain lockfree_lifo");
 
 int hpx_main()
 {

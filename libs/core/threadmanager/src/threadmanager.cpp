@@ -29,7 +29,6 @@
 #include <hpx/modules/topology.hpp>
 #include <hpx/modules/type_support.hpp>
 #include <hpx/modules/util.hpp>
-#include <hpx/threadmanager/detail/abp_priority_scheduler_types.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -454,7 +453,10 @@ namespace hpx::threads {
             thread_pool_init.num_threads_, num_high_priority_queues);
 
         // instantiate the scheduler (ABP FIFO backend - see #6793)
-        using local_sched_type = detail::abp_priority_fifo_scheduler;
+        using local_sched_type =
+            hpx::threads::policies::local_priority_queue_scheduler<std::mutex,
+                hpx::threads::policies::lockfree_abp_fifo>;
+        // Negative guard: catch silent reversion to the pre-#6793 backend.
         static_assert(
             !std::is_same_v<local_sched_type,
                 hpx::threads::policies::local_priority_queue_scheduler<
@@ -509,7 +511,10 @@ namespace hpx::threads {
             thread_pool_init.num_threads_, num_high_priority_queues);
 
         // instantiate the scheduler (ABP LIFO backend - see #6793)
-        using local_sched_type = detail::abp_priority_lifo_scheduler;
+        using local_sched_type =
+            hpx::threads::policies::local_priority_queue_scheduler<std::mutex,
+                hpx::threads::policies::lockfree_abp_lifo>;
+        // Negative guard: catch silent reversion to the pre-#6793 backend.
         static_assert(
             !std::is_same_v<local_sched_type,
                 hpx::threads::policies::local_priority_queue_scheduler<
