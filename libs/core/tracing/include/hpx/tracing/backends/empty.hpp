@@ -257,8 +257,7 @@ namespace hpx::tracing {
     HPX_CXX_CORE_EXPORT constexpr void os_thread_sleep(std::size_t) noexcept {}
 
     HPX_CXX_CORE_EXPORT constexpr void tracing_init(char const*, int, char**,
-        std::uint32_t = 0, std::uint32_t = 1,
-        std::string_view = {}) noexcept
+        std::uint32_t = 0, std::uint32_t = 1, std::string_view = {}) noexcept
     {
     }
 
