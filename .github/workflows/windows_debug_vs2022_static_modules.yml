@@ -56,7 +56,7 @@ jobs:
             --target ALL_BUILD \
             -- -maxcpucount:2 -verbosity:minimal -nologo
           cmake --build build --config Debug \
-            --target tests.unit.modules.config \
+            --target autolink_test \
             -- -maxcpucount:2 -verbosity:minimal -nologo
     - name: Install
       shell: bash
