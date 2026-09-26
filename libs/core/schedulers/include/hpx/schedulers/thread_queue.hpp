@@ -130,6 +130,25 @@ namespace hpx::threads::policies {
             typename TerminatedQueuing::template apply<thread_data*>::type;
 
     protected:
+        // Allocate a fresh thread_data (stackless or stackful). Caller must
+        // not hold locks that would deadlock with the allocator.
+        threads::thread_id_ref_type allocate_thread_object(
+            threads::thread_init_data& data, std::ptrdiff_t stacksize)
+        {
+            threads::thread_data* p;
+            if (stacksize == parameters_.nostack_stacksize_)
+            {
+                p = threads::thread_data_stackless::create(
+                    data, this, stacksize);
+            }
+            else
+            {
+                p = threads::thread_data_stackful::create(
+                    data, this, stacksize);
+            }
+            return thread_id_ref_type(p, thread_id_addref::no);
+        }
+
         template <typename Lock>
         void create_thread_object(threads::thread_id_ref_type& thrd,
             threads::thread_init_data& data, Lock& lk)
@@ -196,40 +215,14 @@ namespace hpx::threads::policies {
                 else
                 {
                     hpx::unlock_guard<Lock> ull(lk);
-
-                    // Allocate a new thread object.
-                    threads::thread_data* p;
-                    if (stacksize == parameters_.nostack_stacksize_)
-                    {
-                        p = threads::thread_data_stackless::create(
-                            data, this, stacksize);
-                    }
-                    else
-                    {
-                        p = threads::thread_data_stackful::create(
-                            data, this, stacksize);
-                    }
-                    thrd = thread_id_ref_type(p, thread_id_addref::no);
+                    thrd = allocate_thread_object(data, stacksize);
                 }
             }
             else
 #endif
             {
                 hpx::unlock_guard<Lock> ull(lk);
-
-                // Allocate a new thread object.
-                threads::thread_data* p;
-                if (stacksize == parameters_.nostack_stacksize_)
-                {
-                    p = threads::thread_data_stackless::create(
-                        data, this, stacksize);
-                }
-                else
-                {
-                    p = threads::thread_data_stackful::create(
-                        data, this, stacksize);
-                }
-                thrd = thread_id_ref_type(p, thread_id_addref::no);
+                thrd = allocate_thread_object(data, stacksize);
             }
         }
 

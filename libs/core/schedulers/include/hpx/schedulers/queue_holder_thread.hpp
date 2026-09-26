@@ -481,6 +481,28 @@ namespace hpx::threads::policies {
             std::terminate();
         }
 
+        // Allocate a fresh thread_data (stackless or stackful).
+        threads::thread_id_ref_type allocate_thread_object(
+            threads::thread_init_data& data, std::ptrdiff_t stacksize)
+        {
+            threads::thread_data* p;
+            if (stacksize == parameters_.nostack_stacksize_)
+            {
+                p = threads::thread_data_stackless::create(
+                    data, this, stacksize);
+            }
+            else
+            {
+                p = threads::thread_data_stackful::create(
+                    data, this, stacksize);
+            }
+            thread_id_ref_type tid(p, thread_id_addref::no);
+            tq_deb.debug(debug::str<>("create_thread_object"), "new",
+                queue_data_print(this),
+                debug::threadinfo<threads::thread_data*>(p));
+            return tid;
+        }
+
         // ----------------------------------------------------------------
         // Not thread safe. This function must only be called by the thread that
         // owns the holder object. Creates a thread_data object using
@@ -554,45 +576,13 @@ namespace hpx::threads::policies {
                 }
                 else
                 {
-                    // Allocate a new thread object.
-                    threads::thread_data* p;
-                    if (stacksize == parameters_.nostack_stacksize_)
-                    {
-                        p = threads::thread_data_stackless::create(
-                            data, this, stacksize);
-                    }
-                    else
-                    {
-                        p = threads::thread_data_stackful::create(
-                            data, this, stacksize);
-                    }
-                    tid = thread_id_ref_type(p, thread_id_addref::no);
-
-                    tq_deb.debug(debug::str<>("create_thread_object"), "new",
-                        queue_data_print(this),
-                        debug::threadinfo<threads::thread_data*>(p));
+                    tid = allocate_thread_object(data, stacksize);
                 }
             }
             else
 #endif
             {
-                // Allocate a new thread object.
-                threads::thread_data* p;
-                if (stacksize == parameters_.nostack_stacksize_)
-                {
-                    p = threads::thread_data_stackless::create(
-                        data, this, stacksize);
-                }
-                else
-                {
-                    p = threads::thread_data_stackful::create(
-                        data, this, stacksize);
-                }
-                tid = thread_id_ref_type(p, thread_id_addref::no);
-
-                tq_deb.debug(debug::str<>("create_thread_object"), "new",
-                    queue_data_print(this),
-                    debug::threadinfo<threads::thread_data*>(p));
+                tid = allocate_thread_object(data, stacksize);
             }
         }
 
