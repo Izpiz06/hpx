@@ -27,6 +27,7 @@ if(MSVC AND HPX_WITH_STATIC_LINKING)
       SOURCES ${sources}
       EXCLUDE_FROM_ALL
       FOLDER ${folder_name}
+      SCAN_FOR_MODULES ${HPX_WITH_CXX_MODULES}
     )
 
     add_hpx_unit_test("modules.config" ${test} ${${test}_PARAMETERS})
