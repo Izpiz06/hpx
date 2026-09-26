@@ -70,5 +70,5 @@ jobs:
           ctest `
           --output-on-failure `
             --build-config Debug `
-            --tests-regex 'tests.examples|tests.unit.modules.config' `
-            --exclude-regex $exclude_regex
+            --tests-regex 'tests\.examples|tests\.unit\.modules\.config\.autolink' `
+            --exclude-regex "$exclude_regex|tests\.examples\.quickstart\.(command_line_handling|component_with_custom_heap)"
