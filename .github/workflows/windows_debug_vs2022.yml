@@ -57,6 +57,9 @@ jobs:
           cmake --build build --config Debug \
           --target autolink_test \
           -- -maxcpucount:2 -verbosity:minimal -nologo
+          cmake --build build --config Debug \
+          --target auto_wrap_main_test \
+          -- -maxcpucount:2 -verbosity:minimal -nologo
     - name: Install
       shell: bash
       run: |
@@ -65,9 +68,12 @@ jobs:
       run: |
           $exclude_regex = & "$env:GITHUB_WORKSPACE/.github/ci-scripts/generate_ctest_exclude_regex.ps1" `
             "$env:GITHUB_WORKSPACE/.github/workflows/tests.examples.targets"
+          $tests_regex = 'tests\.examples|' + `
+            'tests\.unit\.modules\.config\.autolink|' + `
+            'tests\.unit\.init\.auto_wrap_main'
           cd build
           ctest `
           --output-on-failure `
             --build-config Debug `
-            --tests-regex 'tests\.examples|tests\.unit\.modules\.config\.autolink' `
+            --tests-regex $tests_regex `
             --exclude-regex $exclude_regex
