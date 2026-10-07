@@ -70,8 +70,13 @@ $clFlags = $clFlags `
 # hpx_init.lib are not named by any header, and neither are hwloc and the
 # Windows libraries HPX::hpx adds (dbghelp.lib is needed for the stack
 # traces HPX_WITH_STACKTRACES enables by default), so pass those explicitly.
+# /SUBSYSTEM:CONSOLE makes the CRT's mainCRTStartup the entry point, which
+# pulls main() out of hpx_wrap.lib for raw_auto_wrap. Without it the linker
+# only picks an entry point if an object file defines main(). CMake passes it
+# for console executables as well.
 $hwloc = Join-Path $Prefix 'hwloc_installed'
 $libs = @(
+    '/SUBSYSTEM:CONSOLE'
     "/LIBPATH:`"$Prefix\lib`""
     "/LIBPATH:`"$hwloc\lib`""
     'hpx_wrap.lib'
