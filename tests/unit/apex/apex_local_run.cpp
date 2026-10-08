@@ -9,7 +9,7 @@
 #include <hpx/init.hpp>
 #include <hpx/modules/async_local.hpp>
 #include <hpx/modules/testing.hpp>
-#include <hpx/threading_base/scoped_annotation.hpp>
+#include <hpx/modules/threading_base.hpp>
 
 #include <atomic>
 #include <cstdint>
@@ -19,7 +19,7 @@ std::atomic<std::uint64_t> count(0);
 
 std::uint64_t fibonacci(std::uint64_t n)
 {
-    HPX_SCOPED_ANNOTATION("fibonacci");
+    hpx::scoped_annotation annotate("fibonacci");
     ++count;
 
     if (n < 2)
@@ -34,7 +34,7 @@ std::uint64_t fibonacci(std::uint64_t n)
 int hpx_main()
 {
     {
-        HPX_SCOPED_ANNOTATION("main_work");
+        hpx::scoped_annotation annotate("main_work");
         std::uint64_t const result = fibonacci(10);
         HPX_TEST_EQ(result, std::uint64_t(55));
         HPX_TEST(count.load() > 0);
