@@ -30,16 +30,24 @@ namespace hpx::lcos::local::detail {
     ///////////////////////////////////////////////////////////////////////////
     struct condition_variable::queue_entry
     {
-        constexpr queue_entry(
-            hpx::execution_base::agent_ref const ctx, void* q) noexcept
+        queue_entry(hpx::execution_base::agent_ref const ctx, void* q) noexcept
           : ctx_(ctx)
+          , id_(threads::get_self_id())
           , q_(q)
         {
         }
 
         hpx::execution_base::agent_ref ctx_;
+
+        // Keeps the waiting thread alive. Copies are held while resuming the
+        // thread after the lock was released: the waiter may have left its
+        // wait and terminated by then, its thread_data must not be recycled
+        // for an unrelated thread that would receive the wakeup instead.
+        threads::thread_id_ref_type id_;
+
         void* q_;
         std::atomic<bool> was_reset_ = false;
+        std::atomic<bool> was_aborted_ = false;
 
         queue_entry* next = nullptr;
         queue_entry* prev = nullptr;
@@ -69,6 +77,30 @@ namespace hpx::lcos::local::detail {
 
         condition_variable::queue_entry& e_;
     };
+
+    namespace {
+
+        // Wake a waiter after the lock was released. By then the waiter may
+        // have left its wait and terminated: its agent no longer refers to a
+        // valid thread. Use the counted thread id instead, which keeps the
+        // thread_data from being recycled; set_thread_state ignores
+        // terminated threads.
+        void resume_waiter(hpx::execution_base::agent_ref const ctx,
+            threads::thread_id_ref_type const& id,
+            threads::thread_priority const priority)
+        {
+            if (id)
+            {
+                threads::set_thread_state(id.noref(),
+                    threads::thread_schedule_state::pending,
+                    threads::thread_restart_state::signaled, priority, false);
+            }
+            else
+            {
+                ctx.resume(priority);    // waiter is not an HPX thread
+            }
+        }
+    }    // namespace
 
     ///////////////////////////////////////////////////////////////////////////
     condition_variable::~condition_variable()
@@ -125,6 +157,7 @@ namespace hpx::lcos::local::detail {
         {
             auto* front = queue_.front();
             auto const ctx = front->ctx_;
+            auto const id = front->id_;    // keeps the waiter alive
 
             // remove item from queue before error handling
             front->ctx_.reset();
@@ -146,7 +179,7 @@ namespace hpx::lcos::local::detail {
             if (unlock)
                 lock.unlock();
 
-            ctx.resume(priority);
+            resume_waiter(ctx, id, priority);
 
             return not_empty;
         }
@@ -238,6 +271,14 @@ namespace hpx::lcos::local::detail {
     {
         HPX_ASSERT_OWNS_LOCK(lock);
 
+        // an aborted condition variable never queues new waiters
+        if (aborting_ != 0)
+        {
+            HPX_THROW_EXCEPTION(hpx::error::yield_aborted,
+                "condition_variable::wait",
+                "condition_variable is being aborted");
+        }
+
         // enqueue the request and block this thread
         auto const this_ctx = hpx::execution_base::this_thread::agent();
         queue_entry f(this_ctx, &queue_);
@@ -248,6 +289,15 @@ namespace hpx::lcos::local::detail {
             // suspend this thread
             unlock_guard<std::unique_lock<mutex_type>> ul(lock);
             this_ctx.suspend(description);
+        }
+
+        // abort_all() only resumes this thread, report the abort now that the
+        // lock is held again
+        if (f.was_aborted_.load(std::memory_order_relaxed))
+        {
+            HPX_THROW_EXCEPTION(hpx::error::yield_aborted,
+                "condition_variable::wait",
+                "thread aborted while waiting on condition_variable");
         }
 
         return f.ctx_ ? threads::thread_restart_state::timeout :
@@ -271,6 +321,10 @@ namespace hpx::lcos::local::detail {
     {
         HPX_ASSERT_OWNS_LOCK(lock);
 
+        // an aborted condition variable never queues new waiters
+        if (aborting_ != 0)
+            return threads::thread_restart_state::abort;
+
         // enqueue the request and block this thread
         auto const this_ctx = hpx::execution_base::this_thread::agent();
         queue_entry f(this_ctx, &queue_);
@@ -278,61 +332,82 @@ namespace hpx::lcos::local::detail {
 
         reset_queue_entry r(f);
 
-        // suspend this thread
-        unlock_guard<std::unique_lock<mutex_type>> ul(lock);
-        return this_ctx.sleep_until(
-            abs_time.value(),
-            [&, pred = HPX_MOVE(wait_cond)]() {
-                if (f.was_reset_.load(std::memory_order_relaxed))
-                    return true;
-                return pred();
-            },
-            description);
+        threads::thread_restart_state result;
+        {
+            // suspend this thread
+            unlock_guard<std::unique_lock<mutex_type>> ul(lock);
+            result = this_ctx.sleep_until(
+                abs_time.value(),
+                [&, pred = HPX_MOVE(wait_cond)]() {
+                    if (f.was_reset_.load(std::memory_order_relaxed))
+                        return true;
+                    return pred();
+                },
+                description);
+        }
+
+        // abort_all() only resumes this thread, report the abort now that the
+        // lock is held again
+        if (f.was_aborted_.load(std::memory_order_relaxed))
+            return threads::thread_restart_state::abort;
+
+        return result;
     }
 
     template <typename Mutex>
     void condition_variable::abort_all(std::unique_lock<Mutex> lock)
     {
-        // new threads might have been added while we were notifying
-        while (!queue_.empty())
+        // Reject new waiters while the queue is drained below. The lock is
+        // released for every notified thread, an aborted thread that waits
+        // again would otherwise re-enter the queue and could keep this loop
+        // from ever finishing.
+        ++aborting_;
+        auto on_exit = hpx::experimental::scope_exit([&] { --aborting_; });
+
+        // swap the list
+        queue_type queue;
+        queue.swap(queue_);
+
+        // update reference to queue for all queue entries
+        for (queue_entry* qe = queue.front(); qe != nullptr; qe = qe->next)
         {
-            // swap the list
-            queue_type queue;
-            queue.swap(queue_);
+            qe->q_ = &queue;    //-V506
+        }
 
-            // update reference to queue for all queue entries
-            for (queue_entry* qe = queue.front(); qe != nullptr; qe = qe->next)
+        while (!queue.empty())
+        {
+            auto* front = queue.front();
+            auto ctx = front->ctx_;
+            auto const id = front->id_;    // keeps the waiter alive
+
+            // remove item from queue before error handling
+            front->ctx_.reset();
+            front->was_reset_.store(true, std::memory_order_relaxed);
+            front->was_aborted_.store(true, std::memory_order_relaxed);
+
+            queue.pop_front();
+
+            if (HPX_UNLIKELY(!ctx))
             {
-                qe->q_ = &queue;    //-V506
+                LERR_(fatal).format("condition_variable::abort_all: null "
+                                    "thread id encountered");
+                continue;
             }
 
-            while (!queue.empty())
-            {
-                auto* front = queue.front();
-                auto ctx = front->ctx_;
+            LERR_(fatal).format(
+                "condition_variable::abort_all: pending thread: {}", ctx);
 
-                // remove item from queue before error handling
-                front->ctx_.reset();
-                front->was_reset_.store(true, std::memory_order_relaxed);
+            // unlock while notifying thread as this can suspend
+            unlock_guard<std::unique_lock<Mutex>> unlock(lock);
 
-                queue.pop_front();
-
-                if (HPX_UNLIKELY(!ctx))
-                {
-                    LERR_(fatal).format("condition_variable::abort_all: null "
-                                        "thread id encountered");
-                    continue;
-                }
-
-                LERR_(fatal).format(
-                    "condition_variable::abort_all: pending thread: {}", ctx);
-
-                // unlock while notifying thread as this can suspend
-                unlock_guard<std::unique_lock<Mutex>> unlock(lock);
-
-                // forcefully abort thread, do not throw
-                ctx.abort();
-            }
+            // Only wake the thread, the waiter turns the was_aborted_ flag
+            // into an abort itself. The lock is not held here, so the waiter
+            // may already have left wait_until() on its own (timeout). A
+            // forced ctx.abort() would then hit whatever suspension point the
+            // thread is in next (e.g. the spinlock backoff in ~unlock_guard)
+            // and throw yield_aborted from there. A late wakeup is only a
+            // spurious one, as for notify_one().
+            resume_waiter(ctx, id, threads::thread_priority::default_);
         }
     }
 

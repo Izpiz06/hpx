@@ -399,7 +399,7 @@ namespace hpx::parcelset {
                 threads::thread_stacksize::default_, state, true);
 
             auto id = hpx::threads::register_thread(data, ec);
-            if (!ec)
+            if (ec)
                 return false;
 
             if (state == threads::thread_schedule_state::suspended)

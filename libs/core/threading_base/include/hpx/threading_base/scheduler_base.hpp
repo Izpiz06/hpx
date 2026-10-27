@@ -256,6 +256,18 @@ namespace hpx::threads::policies {
         void increment_background_thread_count() noexcept;
         void decrement_background_thread_count() noexcept;
 
+        // Count the workers in the scheduling loop. A worker leaves the loop
+        // once its own queues are empty, but HPX threads running on other
+        // workers can still schedule work on them. The last worker to leave
+        // checks all queues: leave_scheduling_loop returns false if work is
+        // left, and the worker has to take it over.
+        // abandon_scheduling_loop is for a worker that exits the loop without
+        // leaving it (on an error): it is no longer counted and checks
+        // nothing.
+        void enter_scheduling_loop() noexcept;
+        [[nodiscard]] bool leave_scheduling_loop();
+        void abandon_scheduling_loop() noexcept;
+
         // Enumerate all matching threads
         virtual bool enumerate_threads(
             hpx::function<bool(thread_id_type)> const& f,
@@ -377,6 +389,9 @@ namespace hpx::threads::policies {
         threads::thread_pool_base* parent_pool_;
 
         std::atomic<std::int64_t> background_thread_count_;
+
+        // see leave_scheduling_loop
+        std::atomic<std::int64_t> workers_in_loop_{0};
 
         std::atomic<polling_function_ptr> polling_function_mpi_;
         std::atomic<polling_function_ptr> polling_function_cuda_;
